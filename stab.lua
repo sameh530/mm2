@@ -125,6 +125,14 @@ local function nerfKnifePart(obj)
     end
 end
 
+local function destroyKnifeStabRemotes(tool)
+    for _, desc in ipairs(tool:GetDescendants()) do
+        if (desc:IsA("RemoteEvent") or desc:IsA("RemoteFunction")) and not string.find(string.lower(desc.Name), "throw", 1, true) then
+            pcall(function() desc:Destroy() end)
+        end
+    end
+end
+
 local function disableKnifeConnections(tool)
     if getconnections then
         for _, conn in pairs(getconnections(tool.Activated)) do
@@ -138,13 +146,22 @@ end
 
 local function handleKnife(tool)
     if tool:IsA("Tool") and string.find(string.lower(tool.Name), "knife", 1, true) then
-        task.wait(0.1)
+        task.wait(0.3)
         disableKnifeConnections(tool)
-        tool.DescendantAdded:Connect(nerfKnifePart)
+        destroyKnifeStabRemotes(tool)
+        tool.DescendantAdded:Connect(function(desc)
+            nerfKnifePart(desc)
+            if (desc:IsA("RemoteEvent") or desc:IsA("RemoteFunction")) and not string.find(string.lower(desc.Name), "throw", 1, true) then
+                task.defer(function()
+                    pcall(function() desc:Destroy() end)
+                end)
+            end
+        end)
         tool.Equipped:Connect(function()
             isHoldingKnife = true
             task.wait(0.05)
             disableKnifeConnections(tool)
+            destroyKnifeStabRemotes(tool)
         end)
         tool.Unequipped:Connect(function()
             updateKnifeState(LocalPlayer.Character)
