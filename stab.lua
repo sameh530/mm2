@@ -1,4 +1,5 @@
 local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local isHoldingKnife = false
 
@@ -51,6 +52,29 @@ local function shouldBlockRemote(self)
 end
 
 local wrap = newcclosure or function(f) return f end
+
+if hookmetamethod then
+    local oldIndex
+    oldIndex = hookmetamethod(game, "__index", wrap(function(self, key)
+        if not (checkcaller and checkcaller()) and self == UIS then
+            if key == "TouchEnabled" or key == "MouseEnabled" or key == "KeyboardEnabled" then
+                local scr = getcallingscript and getcallingscript()
+                if scr then
+                    local sName = string.lower(scr.Name)
+                    local sParent = scr.Parent
+                    if string.find(sName, "knife", 1, true) or (sParent and string.find(string.lower(sParent.Name), "knife", 1, true)) then
+                        if key == "TouchEnabled" then
+                            return false
+                        else
+                            return true
+                        end
+                    end
+                end
+            end
+        end
+        return oldIndex(self, key)
+    end))
+end
 
 if hookmetamethod and getnamecallmethod then
     local oldNamecall
